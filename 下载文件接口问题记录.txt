@@ -1,0 +1,17 @@
+1，在浏览器中可下载但手机中不能直接安装应用
+
+一般正常下载文件时，都会在response.setContentType("application/octet-stream")，但若想手机浏览器识别是安装文件，则
+
+必须是application/vnd.android.package-archive（android）或application/vnd.iphone（ios）。附上所有content-type：
+
+http://tool.oschina.net/commons
+
+2，在qq中不能直接下载文件
+
+qq这个就比较坑了，一开始不能下载的时候以为是url有问题，结果在手机浏览器和PC浏览器上均能正常下载，所以应该我们文件
+
+返回的形式没有被qq的下载器识别，所以进度始终0导致超时。经分析发现，由于url中最后一个参数是1，qq在下载时显示的文件
+
+名也是1，所以猜想qq下载器是根据最后一个参数是否是一个合法的文件名来判定。故在最后又将url改造成最后一个参数是正确的
+
+文件名，最终测试通过。
