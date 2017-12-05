@@ -1,0 +1,53 @@
+何为跨域，简单的说即为浏览器限制访问A站点下的js代码对B站点下的url进行ajax请求。假如当前域名是www.abc.com，那么在当前环境中运行的js代码，出于安全考虑，正常情况下不能访问www.zzz.com域名下的资源。
+
+
+若要实现跨域，则有两种方式解决：
+1，JSONP
+使用jsonp来进行跨域是一种比较常见的方式，但是在接口已经写好的情况下，无论是服务端还是调用端都需要进行改造且要兼容原来的接口，工作量偏大，于是我们考虑其他方法。
+
+2，CORS协议
+按照参考资料的说法：每一个页面需要返回一个名为‘Access-Control-Allow-Origin’的HTTP头来允许外域的站点访问。你可以仅仅暴露有限的资源和有限的外域站点访问。在COR模式中，访问控制的职责可以放到页面开发者的手中，而不是服务器管理员。当然页面开发者需要写专门的处理代码来允许被外域访问。 我们可以理解为：如果一个请求需要允许跨域访问，则需要在http头中设置Access-Control-Allow-Origin来决定需要允许哪些站点来访问。如假设需要允许www.foo.com这个站点的请求跨域，则可以设置：Access-Control-Allow-Origin:http://www.foo.com。或者Access-Control-Allow-Origin: * 。 CORS作为HTML5的一部分，在大部分现代浏览器中有所支持。
+
+
+CORS具有以下常见的header：
+
+Access-Control-Allow-Origin: http://foo.org
+
+Access-Control-Max-Age: 3628800
+
+Access-Control-Allow-Methods: GET，PUT, DELETE
+
+Access-Control-Allow-Headers: content-type
+
+"Access-Control-Allow-Origin"表明它允许"http://foo.org"发起跨域请求
+
+"Access-Control-Max-Age"表明在3628800秒内，不需要再发送预检验请求，可以缓存该结果
+
+"Access-Control-Allow-Methods"表明它允许GET、PUT、DELETE的外域请求
+
+"Access-Control-Allow-Headers"表明它允许跨域请求包含content-type头
+
+
+CORS基本流程
+首先发出预检验（Preflight）请求，它先向资源服务器发出一个OPTIONS方法、包含“Origin”头的请求。该回复可以控制COR请求的方法，HTTP头以及验证等信息。只有该请求获得允许以后，才会发起真实的外域请求。
+
+Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource. Origin 'null' is therefore not allowed access. The response had HTTP status code 403.
+从以上这段错误信息中我们可以看到，直接原因是因为请求头中没有Access-Control-Allow-Origin这个头。于是我们直接想法便是在请求头中加上这个header。服务器能够返回403，表明服务器确实对请求进行了处理。
+
+我们在拦截器的preHandle（或doFilter）里处理。加入如下代码:
+response.setHeader("Access-Control-Allow-Origin", "*");
+
+此时浏览器中OPTIONS请求返回200。但是依然报错：
+Request header field Content-Type is not allowed by Access-Control-Allow-Headers in preflight response.
+
+我们注意到：在request的请求头里有Access-Control-Request-Headers:accept, content-type，但是这个请求头的中没有，此时浏览器没有据需发送请求。尝试在response中加入:
+response.setHeader("Access-Control-Allow-Headers", "SelfHeader1, SelfHeader2, Origin, X-Requested-With, Content-Type, Accept");
+注意，这里的SelfHeader1, SelfHeader2为自定义header，后面4个是才是必须填写的。
+
+执行成功。至此，我们通过分析原理使SpringMVC实现跨域，原有实现以及客户端代码不需要任何改动。
+
+
+总结：在浏览器复杂请求时，一定会先使用OPTIONS进行尝试性请求，此时服务器并没有默认Origin, X-Requested-With, Content-Type, Accept这四种header可以被通过，所以必须如上所述，将这四种header添加进去。
+
+
+最后，十分感谢前端的同事刘同学配合我一起发现、解决问题。
