@@ -61,3 +61,25 @@ UPDATE t_user_integration AS tui SET tui.user_integral = (
     ) AS obj WHERE obj.`user_id` = tui.`user_id`
 );
 
+
+四，多表查询并以某个字段做排序
+
+SELECT rank , FLOOR(honorIntegral) as honorIntegral , displayName
+    FROM (
+    SELECT @rownum := @rownum + 1 AS rank , displayName , honor_integral AS honorIntegral , user_id AS userId
+    FROM(
+    SELECT
+    tui.* ,
+    (SELECT display_name FROM t_ldap_user WHERE id = tui.user_id) AS displayName
+    FROM t_user_integration tui , t_user_usage tuu
+    WHERE tui.user_id = tuu.user_id
+    <![CDATA[ AND tuu.type >= 0 ]]>
+    GROUP BY tuu.user_id
+    ORDER BY honor_integral DESC
+    ) AS obj ,
+    (SELECT @rownum := 0) r
+    )
+    AS objRank WHERE userId IN
+    <foreach collection="list" index="index" item="userId" open="(" separator="," close=")">
+      #{userId,jdbcType=INTEGER}
+    </foreach>
