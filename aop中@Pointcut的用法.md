@@ -73,4 +73,4 @@ expression="execution(* com.savage.simplespring.bean.MessageSender.*(..))"/>
 </aop:aspect>
 </aop:config>
 
-
+https://blog.csdn.net/autfish/article/details/51184405£®execution∫Û∆•≈‰∑Ω Ω£©
