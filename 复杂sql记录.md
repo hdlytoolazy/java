@@ -83,3 +83,36 @@ SELECT rank , FLOOR(honorIntegral) as honorIntegral , displayName
     <foreach collection="list" index="index" item="userId" open="(" separator="," close=")">
       #{userId,jdbcType=INTEGER}
     </foreach>
+	
+	
+五，快速插入100W条测试数据
+CREATE TABLE `t_user` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `age` tinyint(4) DEFAULT NULL,
+  `create_time` datetime DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP PROCEDURE IF EXISTS proc_batch_insert;
+DELIMITER //
+CREATE PROCEDURE proc_batch_insert()
+BEGIN
+DECLARE pre_name BIGINT;
+DECLARE ageVal INT;
+DECLARE i INT;
+SET pre_name=187635267;
+SET ageVal=100;
+SET i=1;
+WHILE i < 1000000 DO
+        INSERT INTO t_user(`name`,age,create_time,update_time) VALUES(CONCAT(pre_name,'@qq.com'),(ageVal+1)%30,NOW(),NOW());
+SET pre_name=pre_name+100;
+SET i=i+1;
+END WHILE;
+END //
+ 
+
+CALL proc_batch_insert();
+
+DELIMITER ;
