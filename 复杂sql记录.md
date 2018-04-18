@@ -86,6 +86,7 @@ SELECT rank , FLOOR(honorIntegral) as honorIntegral , displayName
 	
 	
 五，快速插入100W条测试数据
+最好建表时使用MyISAM，后期再改为InnoDB，这样插入时快很多
 CREATE TABLE `t_user` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `name` varchar(255) DEFAULT NULL,
@@ -116,3 +117,52 @@ END //
 CALL proc_batch_insert();
 
 DELIMITER ;
+
+
+六，千万级数据查询优化技巧
+CREATE TABLE `t_user` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) DEFAULT NULL,
+  `age` tinyint(4) DEFAULT NULL,
+  `create_time` datetime DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+EXPLAIN SELECT * FROM t_user WHERE NAME > '1000000000@qq.com' LIMIT 1000000 , 10
+
+![Alt text](https://raw.githubusercontent.com/hdlytoolazy/java/master/raw/Screenshots/20180417183551.png)
+
+真实执行时间为11s左右，可以看出相当的慢。
+
+1）使用子查询优化
+
+EXPLAIN SELECT * FROM t_user WHERE
+id>=(SELECT id FROM t_user WHERE NAME > '1000000000@qq.com' LIMIT 1000000,1) 
+LIMIT 10;
+
+![Alt text](https://raw.githubusercontent.com/hdlytoolazy/java/master/raw/Screenshots/20180417183620.png)
+
+真实执行时间不到0.1s，可以看出已经提升了不止一个数量级的查询速度。这种方式先定位偏移位置的 id，然后往后查询，
+这种方式适用于 id 递增的情况。
+
+2）使用 id 限定优化
+
+这种方式假设数据表的id是连续递增的，则我们根据查询的页数和查询的记录数可以算出查询的id的范围，
+可以使用 id between and 来查询,基本能够在几十毫秒内完成。
+
+EXPLAIN SELECT * FROM t_user WHERE id BETWEEN x1 AND x2 AND NAME > '1000000000@qq.com' LIMIT 10
+
+
+3）使用临时表优化
+
+对于使用 id 限定优化中的问题，需要 id 是连续递增的，但是在一些场景下，比如使用历史表的时候，或者出现过数据缺失问题时，
+可以考虑使用临时存储的表来记录分页的id，使用分页的id来进行 in 查询。这样能够极大的提高传统的分页查询速度，
+尤其是数据量上千万的时候。
+
+
+一般情况下，在数据库中建立表的时候，强制为每一张表添加 id 递增字段，这样方便查询。
+如果像是订单库等数据量非常庞大，一般会进行分库分表。这个时候不建议使用数据库的 id 作为唯一标识，
+而应该使用分布式的高并发唯一 id 生成器来生成，并在数据表中使用另外的字段来存储这个唯一标识。
+使用先使用范围查询定位 id （或者索引），然后再使用索引进行定位数据，能够提高好几倍查询速度。
+即先 select id，然后再 select *；
