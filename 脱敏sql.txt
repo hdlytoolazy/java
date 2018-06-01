@@ -1,0 +1,18 @@
+select ID, 
+case
+when length(ID_CARD) > 10 then CONCAT(LEFT(ID_CARD,3), '****' ,RIGHT(ID_CARD,4))
+when length(ID_CARD) > 6 then CONCAT(LEFT(ID_CARD,1), '****' ,RIGHT(ID_CARD,2)) 
+when length(ID_CARD) > 0 then CONCAT(LEFT(ID_CARD,1), '**' ,RIGHT(ID_CARD,1))
+else ''
+end AS …Ì∑›÷§∫≈ 
+from sys_user
+
+
+select ID, 
+case
+when length(EMAIL) > 10 then CONCAT(LEFT(EMAIL,4), '****@****' ,SUBSTRING(EMAIL, INSTR(EMAIL, '@') + 3))
+when length(EMAIL) > 6 then CONCAT(LEFT(EMAIL,1), '**@**' ,SUBSTRING(EMAIL, INSTR(EMAIL, '@') + 3))
+when length(EMAIL) > 0 then CONCAT(LEFT(EMAIL,1), '*@*' ,SUBSTRING(EMAIL, INSTR(EMAIL, '@') + 3))
+else ''
+end AS ” œ‰
+from sys_user
