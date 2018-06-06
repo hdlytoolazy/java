@@ -166,3 +166,44 @@ EXPLAIN SELECT * FROM t_user WHERE id BETWEEN x1 AND x2 AND NAME > '1000000000@q
 而应该使用分布式的高并发唯一 id 生成器来生成，并在数据表中使用另外的字段来存储这个唯一标识。
 使用先使用范围查询定位 id （或者索引），然后再使用索引进行定位数据，能够提高好几倍查询速度。
 即先 select id，然后再 select *；
+
+
+七，利用在一条语句中count出不同的条件,记录一下 ..  
+select 
+CODE as '单号',
+VEHICLE_LP as '车牌号',
+DRIVER_NAME as '司机',
+DRIVER_PHONE as '司机电话',
+DISPATCH_TIME as '调度派车时间',
+PLAN_DEPART_TIME as '计划发运时间',
+DEPART_TIME as '发运时间',
+BILL_QUANTITY as '计划单数',
+EXCEPTED_DISTANCE as '预估里程',
+temp.QUANTITY as '数量',
+temp.WEIGHT as '重量',
+temp.VOLUME as '体积',
+count(if(temp.ohState = 80, true, null)) as '已完成',
+count(if(temp.lState > 35, true, null)) as '已装车',
+count(if(temp.lState = 50, true, null)) as '已运抵'
+from (
+select
+sm.CODE,
+sm.VEHICLE_LP,
+sm.DRIVER_NAME,
+sm.DRIVER_PHONE,
+sm.DISPATCH_TIME,
+sm.PLAN_DEPART_TIME,
+sm.DEPART_TIME,
+sm.BILL_QUANTITY,
+sm.EXCEPTED_DISTANCE,
+l.STATE lState,
+oh.STATE ohState,
+sm.QUANTITY,
+sm.WEIGHT,
+sm.VOLUME
+from shipment sm
+left join leg l on l.SHIPMENT_ID = sm.ID
+left join order_header oh on l.ORDER_ID = oh.ID
+where sm.PLAN_DEPART_TIME > '2018-06-05'
+) as temp
+group by temp.CODE
